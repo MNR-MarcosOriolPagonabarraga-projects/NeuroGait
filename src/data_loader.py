@@ -21,9 +21,7 @@ class Enabl3sDataLoader:
     - Supports batch loading for training sets.
     """
     
-    # Standard mapping based on ENABL3S documentation and user file structure
     DEFAULT_CHANNEL_MAP = {
-        # EMG Shank & Thigh (Sensors)
         'TA': 'Right_TA',           # Tibialis Anterior
         'MG': 'Right_MG',           # Medial Gastrocnemius
         'SOL': 'Right_SOL',         # Soleus
@@ -32,11 +30,9 @@ class Enabl3sDataLoader:
         'BF': 'Right_BF',           # Biceps Femoris
         'ST': 'Right_ST',           # Semitendinosus
         
-        # Kinematics (Ground Truth Labels)
         'Ankle_Angle': 'Right_Ankle',
         'Knee_Angle': 'Right_Knee',
         
-        # Discrete Events (Triggers)
         'Heel_Strike': 'Right_Heel_Contact',
         'Toe_Off': 'Right_Toe_Off'
     }
@@ -54,17 +50,13 @@ class Enabl3sDataLoader:
         self.subject_id = subject_id
         self.channel_map = custom_map if custom_map else self.DEFAULT_CHANNEL_MAP
         
-        # Validate path existence
         if not os.path.exists(self.root_path):
             logger.error(f"Root path does not exist: {self.root_path}")
             raise FileNotFoundError(f"Root path not found: {self.root_path}")
 
     def _get_file_path(self, circuit_id: int, file_type: str = 'raw') -> str:
         """Constructs the file path following ENABL3S naming convention."""
-        # Naming convention: AB156_Circuit_001_raw.csv
         filename = f"{self.subject_id}_Circuit_{circuit_id:03d}_{file_type}.csv"
-        
-        # Folder convention: Raw or Processed (Capitalized in your tree structure)
         folder_name = "Raw" if file_type.lower() == 'raw' else "Processed"
         
         return os.path.join(self.root_path, self.subject_id, folder_name, filename)
@@ -88,7 +80,6 @@ class Enabl3sDataLoader:
             logger.warning(f"File not found for Circuit {circuit_id}: {file_path}")
             return pd.DataFrame()
 
-        # Map requested abstract names to actual CSV headers
         usecols = None
         valid_keys = []
         
@@ -102,10 +93,8 @@ class Enabl3sDataLoader:
             usecols = [self.channel_map[k] for k in valid_keys]
 
         try:
-            # Memory Optimization: Load ONLY specific columns
             df = pd.read_csv(file_path, usecols=usecols)
             
-            # Rename columns back to abstract names (e.g., 'Right_TA' -> 'TA')
             if requested_channels:
                 reverse_map = {v: k for k, v in self.channel_map.items() if k in valid_keys}
                 df.rename(columns=reverse_map, inplace=True)
@@ -137,7 +126,6 @@ class Enabl3sDataLoader:
             df = self.load_circuit(cid, requested_channels=config)
             
             if not df.empty:
-                # Add metadata column for debugging
                 df['Circuit_ID'] = cid
                 data_frames.append(df)
             else:
@@ -174,9 +162,12 @@ class Enabl3sDataLoader:
             logger.error(f"Cannot label data: Column '{angle_col}' missing.")
             return df
             
-        # Vectorized operation using NumPy for performance
-        # If Angle > threshold -> Swing (1), else Stance (0)
-        df['Label_Phase'] = np.where(df[angle_col] > threshold, 1, 0)
+        baseline = df[angle_col].median()
+        centered_angle = df[angle_col] - baseline
         
-        logger.info(f"Labels generated. Distribution: {df['Label_Phase'].value_counts().to_dict()}")
+        threshold = np.percentile(centered_angle, 75)
+        df['Label_Phase'] = np.where(centered_angle > threshold, 1, 0)
+        
+        swing_ratio = df['Label_Phase'].mean() * 100
+        logger.info(f"Labels generated (Percentile-75). Threshold: {threshold:.4f}. Swing Ratio: {swing_ratio:.2f}%")
         return df
