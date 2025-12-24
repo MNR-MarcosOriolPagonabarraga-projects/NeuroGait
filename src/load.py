@@ -33,8 +33,8 @@ class Enabl3sDataLoader:
         'ST': 'Right_ST',           # Semitendinosus
         
         # Kinematics (Ground Truth Labels)
-        'Ankle_Angle': 'Right_Ankle_Angle',
-        'Knee_Angle': 'Right_Knee_Angle',
+        'Ankle_Angle': 'Right_Ankle',
+        'Knee_Angle': 'Right_Knee',
         
         # Discrete Events (Triggers)
         'Heel_Strike': 'Right_Heel_Contact',
@@ -67,7 +67,7 @@ class Enabl3sDataLoader:
         # Folder convention: Raw or Processed (Capitalized in your tree structure)
         folder_name = "Raw" if file_type.lower() == 'raw' else "Processed"
         
-        return os.path.join(self.root_path, folder_name, filename)
+        return os.path.join(self.root_path, self.subject_id, folder_name, filename)
 
     def load_circuit(self, circuit_id: int, requested_channels: Optional[List[str]] = None, file_type: str = 'raw') -> pd.DataFrame:
         """
@@ -113,7 +113,7 @@ class Enabl3sDataLoader:
             return df
             
         except ValueError as e:
-            logger.error(f"Column mismatch in file {filename}. Error: {e}")
+            logger.error(f"Column mismatch in file {file_path}. Error: {e}")
             return pd.DataFrame()
         except Exception as e:
             logger.critical(f"Unexpected error loading Circuit {circuit_id}: {e}")
@@ -180,32 +180,3 @@ class Enabl3sDataLoader:
         
         logger.info(f"Labels generated. Distribution: {df['Label_Phase'].value_counts().to_dict()}")
         return df
-
-# ==========================================
-# Usage Example (Copy this to your main script)
-# ==========================================
-if __name__ == "__main__":
-    # 1. Configuration
-    PATH_ROOT = '/home/marcos/Downloads/5362627'  # Update this path
-    SUBJECT = 'AB156'
-    
-    # 2. Define sensors for the Low-Resource Model
-    # We load TA, MG, RF for input, and Ankle_Angle for Ground Truth
-    SENSOR_CONFIG = ['TA', 'MG', 'RF', 'Ankle_Angle']
-    
-    # 3. Initialize Loader
-    loader = Enabl3sDataLoader(PATH_ROOT, SUBJECT)
-    
-    # 4. Load Training Batch (e.g., first 5 circuits)
-    df_train = loader.load_dataset_batch(range(1, 6), config=SENSOR_CONFIG)
-    
-    # 5. Generate Labels (Cross-Modal Learning)
-    # Using Ankle Angle to create binary labels (0=Stance, 1=Swing)
-    df_train = loader.add_gait_phase_label(df_train, angle_col='Ankle_Angle', threshold=2.0)
-    
-    # 6. Preview Data
-    if not df_train.empty:
-        print("\n--- Data Preview ---")
-        print(df_train.head())
-    else:
-        print("Failed to load data.")
