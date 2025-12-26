@@ -54,6 +54,7 @@ class EMGPreprocessor:
             end = start + window_samples
             window = data[start:end, :]
             
+            # Features
             mav = np.mean(window, axis=0)
             wl = np.sum(np.abs(np.diff(window, axis=0)), axis=0)
             
@@ -65,3 +66,5 @@ class EMGPreprocessor:
             features[i, :] = np.array(feats_row)
             
         return features
+
+class 
