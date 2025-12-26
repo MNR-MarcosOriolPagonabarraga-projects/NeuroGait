@@ -66,5 +66,3 @@ class EMGPreprocessor:
             features[i, :] = np.array(feats_row)
             
         return features
-
-class 
