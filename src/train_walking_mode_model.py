@@ -15,9 +15,6 @@ MODE_NAMES = {
     1: "Level Walking",
     2: "Ramp Ascent",
     3: "Ramp Descent",
-    4: "Stair Ascent",
-    5: "Stair Descent",
-    6: "Standing"
 }
 
 
@@ -33,7 +30,7 @@ def extract_features_from_window(window):
     return np.array(features)
 
 
-def load_and_preprocess_subjects(data_root, subjects, emg_channels, load_channels, target_fs):
+def load_and_preprocess_subjects(data_root, subjects, emg_channels, load_channels, modes, target_fs):
     """Load and preprocess data from multiple subjects."""
     preprocessor = EMGPreprocessor()
     all_data = []
@@ -51,6 +48,7 @@ def load_and_preprocess_subjects(data_root, subjects, emg_channels, load_channel
         print(f"  Loading {num_circuits} circuits")
         
         dataset_df = loader.load_dataset_batch(circuits_to_load, load_channels)
+        dataset_df = dataset_df[dataset_df['Mode'].isin(modes)]
         if dataset_df.empty:
             print(f"  Warning: No data loaded, skipping...")
             continue
@@ -158,8 +156,8 @@ def main():
     subjects = ["AB156"]
     emg_channels = ['TA', 'MG', 'RF']
     target_fs = 250
-    window_size_ms = 200
-    step_size_ms = 50
+    window_size_ms = 2000
+    step_size_ms = 100
     
     print("="*60)
     print("Multi-Mode Walking Detection - Training Pipeline")
@@ -173,7 +171,7 @@ def main():
     # Load and preprocess data
     combined_df = load_and_preprocess_subjects(
         data_root, subjects, emg_channels, 
-        emg_channels + ['Mode'], target_fs
+        emg_channels + ['Mode'], MODE_NAMES, target_fs
     )
     
     # Create features

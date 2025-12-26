@@ -70,6 +70,38 @@ def export_rf_to_cpp(model, file, prefix="RF"):
     file.write("    return best_class;\n")
     file.write("}\n\n")
 
+def export_dnn_to_cpp(model, filename="model_weights.h"):
+    """
+    Exports a simple Keras MLP (Dense layers) to a C++ header file.
+    """
+    with open(filename, 'w') as f:
+        f.write("#ifndef MODEL_WEIGHTS_H\n#define MODEL_WEIGHTS_H\n\n")
+        
+        # Iterate through layers to find Dense layers with weights
+        dense_idx = 0
+        for layer in model.layers:
+            if not layer.get_weights(): continue # Skip Flatten/Input layers
+            
+            W, b = layer.get_weights()
+            
+            # Write Weights (Flattened for row-major or column-major access)
+            # Keras weights are usually (Input x Output), we flatten them
+            f.write(f"// Layer {dense_idx} ({layer.name}): {W.shape[0]} inputs -> {W.shape[1]} outputs\n")
+            f.write(f"const float W{dense_idx}[{W.size}] = {{\n")
+            f.write(", ".join(map(str, W.flatten())))
+            f.write("\n};\n\n")
+            
+            # Write Biases
+            f.write(f"const float b{dense_idx}[{b.size}] = {{\n")
+            f.write(", ".join(map(str, b.flatten())))
+            f.write("\n};\n\n")
+            
+            dense_idx += 1
+            
+        f.write("#endif // MODEL_WEIGHTS_H\n")
+    
+    print(f"Model exported to {filename}")
+
 def generate_cpp_header(models, system_name="Hierarchical", filename="embedded/classifier.h"):
     """
     Generates C++ header for one or more models.
