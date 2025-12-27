@@ -7,7 +7,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 from .lib.data_loader import Enabl3sDataLoader
 from .lib.preprocess import EMGPreprocessor
 from .lib.dataset import MultiModeDataset
-from .lib.train import train_state_classifier
+from .lib.train import train_LDA  
 
 
 MODE_NAMES = {
@@ -193,7 +193,7 @@ def main():
     print("="*60)
     print("Training State Classifier")
     print("="*60)
-    model = train_state_classifier(X_train, y_train)
+    model = train_LDA(X_train, y_train)
     
     if model is None:
         raise RuntimeError("Model training failed!")
