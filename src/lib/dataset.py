@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import bisect
-from typing import List, Tuple, Generator
+from typing import List, Tuple, Generator, Optional
 
 class SlidingWindowDataset:
     """
@@ -130,15 +130,19 @@ class MultiModeDataset(SlidingWindowDataset):
         df: pd.DataFrame, 
         feature_cols: List[str], 
         label_col: str,
+        group_col: Optional[str] = None,
         window_size_ms: float = 200.0,
         step_size_ms: float = 50.0,
         fs: float = 250.0
     ):
         processed_segments = []
 
-        # Create segments based on mode transitions
+        # Create segments based on group_col if provided, else label_col
+        # We need to ensure we split on changes in this column
+        segment_key = group_col if group_col else label_col
+        
         df_ops = df.copy()
-        df_ops['group_id'] = (df_ops[label_col] != df_ops[label_col].shift()).cumsum()
+        df_ops['group_id'] = (df_ops[segment_key] != df_ops[segment_key].shift()).cumsum()
         
         # Process each continuous mode segment
         for _, group in df_ops.groupby('group_id'):

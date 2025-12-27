@@ -16,11 +16,8 @@ PHASE_NAMES = {
     2: "None"
 }
 
-# Mapping specific modes to training categories
-# Stance/Swing training will happen on these modes:
-DYNAMIC_MODES = [1, 2, 3] # Level Walking, Ramp Ascent, Ramp Descent
-# These modes will be forced to "None" class:
-STATIC_MODES = [0, 6] # Sitting, Standing
+DYNAMIC_MODES = [1, 2, 3]
+STATIC_MODES = [0, 6]
 
 MODE_NAMES = {
     0: "Sitting",
@@ -29,55 +26,6 @@ MODE_NAMES = {
     3: "Ramp Descent",
     6: "Standing"
 }
-
-def calculate_gait_phase_cycle(df):
-    """
-    Calculates a continuous gait phase (0.0 to 1.0) based on Heel_Strike to Heel_Strike.
-    0% = Heel Strike, ~60% = Toe Off, 100% = Next Heel Strike.
-    """
-    if 'Heel_Strike' not in df.columns or 'Toe_Off' not in df.columns:
-        return np.zeros(len(df))
-
-    phase_cycle = np.full(len(df), np.nan)
-    
-    # Identify non-NaN values as events
-    valid_hs = np.where(df['Heel_Strike'].notna())[0]
-    
-    if len(valid_hs) < 2:
-        return np.zeros(len(df)) # Not enough events
-    
-    n_samples = len(df)
-    sample_indices = np.arange(n_samples)
-    
-    # We can use numpy searchsorted to find the 'next' HS for each sample
-    # side='right' means for sample x, we find index i such that valid_hs[i-1] <= x < valid_hs[i]
-    next_hs_idx_positions = np.searchsorted(valid_hs, sample_indices, side='right')
-    
-    # Filter bounds: we need both previous and next HS
-    # positions must be > 0 (has previous) and < len (has next)
-    # However, searchsorted returns len if x > all valid_hs
-    
-    valid_mask = (next_hs_idx_positions > 0) & (next_hs_idx_positions < len(valid_hs))
-    
-    indices_to_calc = sample_indices[valid_mask]
-    pos = next_hs_idx_positions[valid_mask]
-    
-    prev_hs = valid_hs[pos - 1]
-    next_hs = valid_hs[pos]
-    
-    # Calculate progress
-    duration = next_hs - prev_hs
-    # Avoid division by zero
-    duration[duration == 0] = 1 
-    
-    progress = (indices_to_calc - prev_hs) / duration
-    
-    phase_cycle[indices_to_calc] = progress
-    
-    # Fill NaNs. 
-    # Before first HS: 0.0? Or maybe assume cycle based on first HS? Let's use 0.0
-    # After last HS: 1.0? Or extrapolate? Let's use 0.0 (None state often)
-    return np.nan_to_num(phase_cycle)
 
 def extract_features_from_window(window):
     """Extract MAV, RMS, and WL features from each EMG channel."""
@@ -129,24 +77,18 @@ def load_and_preprocess_subjects(data_root, subjects, emg_channels, load_channel
         dataset_df[emg_channels] = preprocessor.apply_filter(dataset_df[emg_channels].values)
         dataset_df[emg_channels] = preprocessor.rectify(dataset_df[emg_channels].values)
         
-        print(f"  Calculating Gait Phase Cycle...")
-        # Calculate per circuit to avoid jumps
-        dataset_df['Gait_Phase_Cycle'] = dataset_df.groupby('Circuit_ID', group_keys=False).apply(
-            lambda x: pd.Series(calculate_gait_phase_cycle(x), index=x.index)
-        )
-        
         # Generate Target Class (0, 1, 2)
         # Default to None (2)
         dataset_df['Phase_Class'] = 2 
-        
-        # Logic for Dynamic Modes
-        is_dynamic = dataset_df['Mode'].isin(DYNAMIC_MODES)
+
+        # Only use Walking (Mode 1) for Stance/Swing labels
+        is_walking = dataset_df['Mode'] == 1
         
         # Stance (Loader=1) -> Class 0
-        dataset_df.loc[is_dynamic & (dataset_df['Label_Phase'] == 1), 'Phase_Class'] = 0
+        dataset_df.loc[is_walking & (dataset_df['Label_Phase'] == 1), 'Phase_Class'] = 0
         
         # Swing (Loader=0) -> Class 1
-        dataset_df.loc[is_dynamic & (dataset_df['Label_Phase'] == 0), 'Phase_Class'] = 1
+        dataset_df.loc[is_walking & (dataset_df['Label_Phase'] == 0), 'Phase_Class'] = 1
         
         unique_classes = sorted(dataset_df['Phase_Class'].unique())
         print(f"  Classes present: {unique_classes}")
@@ -164,10 +106,14 @@ def create_windowed_features(df, emg_channels, window_size_ms, step_size_ms, tar
     """Create windowed dataset and extract features."""
     print(f"\nCreating windowed dataset...")
     
+    # Create segment group to prevent merging disparate circuits/modes
+    df['Segment_Group'] = df['Circuit_ID'].astype(str) + '_' + df['Mode'].astype(str)
+
     dataset = MultiModeDataset(
         df=df,
         feature_cols=emg_channels,
         label_col='Phase_Class',
+        group_col='Segment_Group',
         window_size_ms=window_size_ms,
         step_size_ms=step_size_ms,
         fs=target_fs
@@ -223,7 +169,7 @@ def evaluate_and_report(model, X_test, y_test):
     print()
 
 
-def save_model_and_config(model, emg_channels, target_fs, window_size_ms, step_size_ms, output_dir="models"):
+def save_model_and_config(model, emg_channels, target_fs, window_size_ms, step_size_ms, output_dir="models/gait_phase"):
     """Save trained model and configuration."""
     os.makedirs(output_dir, exist_ok=True)
     
@@ -256,10 +202,10 @@ def main():
 
     subjects = ["AB156"]
     emg_channels = ['TA', 'MG', 'RF']
-    load_channels = ['TA', 'MG', 'RF', 'Mode', 'Ankle_Angle', 'Knee_Angle', 'Heel_Strike', 'Toe_Off']
+    load_channels = ['TA', 'MG', 'RF', 'Mode', 'Ankle_Angle', 'Knee_Angle']
     target_fs = 250
-    window_size_ms = 200 
-    step_size_ms = 50    
+    window_size_ms = 2000 
+    step_size_ms = 100    
     
     print("="*60)
     print("Gait Phase Detection (Stance/Swing/None) - Training Pipeline")
