@@ -34,7 +34,7 @@ We solve the "missing label" problem by using a rich dataset (ENABL3S) where kin
 #### Phase 1: Data Ingestion & Labeling (Python / Offline)
 * **Dataset:** ENABL3S (Example Subject: `AB156`).
 * **Ground Truth Generation:**
-    * Load `Right_Ankle_Angle` (Kinematics).
+    * Load `Ankle_Angle` (Kinematics).
     * **Rule:** If Angle > Threshold ($\approx 0^\circ$ relative to neutral) $\rightarrow$ Label as `SWING (1)`.
     * **Rule:** Else $\rightarrow$ Label as `STANCE (0)`.
 * **Input Features ($X$):** Raw EMG from TA, MG, RF.
@@ -50,12 +50,15 @@ Simulating the embedded firmware environment:
     * **Features:**
         * **MAV** (Mean Absolute Value): Energy metric.
         * **WL** (Waveform Length): Complexity/Onset metric.
-    * **Input Vector:** `[TA_MAV, TA_WL, MG_MAV, MG_WL, RF_MAV, RF_WL]` (6 floats).
+        * **RMS** (Root Mean Square): Root meaned square Error.
+    * **Input Vector:** `[TA_MAV, TA_RMS, TA_WL, MG_MAV, MG_RMS, MG_WL, RF_MAV, RF_RMS, RF_WL]` (9 floats).
 
 #### Phase 3: Classification Model
 * **Model Choice:** **Linear Discriminant Analysis (LDA)**.
 * **Why?** $O(n)$ complexity, matrix multiplication is native to C++, highly stable.
-* **Output:** Probability of Swing vs. Stance.
+* **Output:**
+    * Model1 -> Probability of walking mode (sitting, standing, level-walking, ramp ascent, ramp descent). 
+    * Model2 -> Probability of Swing vs. Stance. 
 
 #### Phase 4: Control Logic (The "Safety Layer")
 A **Finite State Machine (FSM)** filters the LDA output to prevent jitter or physiological impossibilities.
@@ -92,7 +95,7 @@ NeuroGait/
 
     - Metric: Accuracy > 90% and Recall on "Swing Onset" (Critical for drop foot).
 
-3.  **Porting**: Save the LDA coefficients (W vector and bias b) to embedded/classifier.h.
+3.  **Porting**: Save the LDA coefficients (W vector and bias b) to embedded/model_n.cpp.
 
 4.  **Simulation**: Test the full pipeline on a "held-out" circuit file to simulate real-time performance.
 

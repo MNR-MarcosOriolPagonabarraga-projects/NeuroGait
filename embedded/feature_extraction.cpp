@@ -7,8 +7,8 @@
 
 namespace NeuroGait {
 
-// 100ms Window @ 200Hz = 20 Samples
-const int WINDOW_SIZE = 20;
+// 2000ms Window @ 250Hz = 500 Samples
+const int WINDOW_SIZE = 500;
 
 struct FeatureVector {
     float mav;

@@ -4,10 +4,10 @@ import pandas as pd
 import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.ensemble import RandomForestClassifier
 from .lib.data_loader import Enabl3sDataLoader
 from .lib.preprocess import EMGPreprocessor
 from .lib.dataset import MultiModeDataset
+from .lib.train import train_LDA
 
 # Defines the mapping for the 3 classes
 PHASE_NAMES = {
@@ -18,14 +18,6 @@ PHASE_NAMES = {
 
 DYNAMIC_MODES = [1, 2, 3]
 STATIC_MODES = [0, 6]
-
-MODE_NAMES = {
-    0: "Sitting",
-    1: "Level Walking",
-    2: "Ramp Ascent",
-    3: "Ramp Descent",
-    6: "Standing"
-}
 
 def extract_features_from_window(window):
     """Extract MAV, RMS, and WL features from each EMG channel."""
@@ -49,10 +41,6 @@ def load_and_preprocess_subjects(data_root, subjects, emg_channels, load_channel
         
         loader = Enabl3sDataLoader(data_root, subject, target_fs=target_fs)
         raw_dir = os.path.join(data_root, subject, 'Raw')
-        if not os.path.exists(raw_dir):
-            print(f"  Warning: Raw directory not found: {raw_dir}")
-            continue
-            
         circuit_files = [f for f in os.listdir(raw_dir) if f.endswith('_raw.csv')]
         num_circuits = len(circuit_files)
         
@@ -234,20 +222,10 @@ def main():
     print(f"Train: {X_train.shape[0]} samples, Test: {X_test.shape[0]} samples\n")
     
     print("="*60)
-    print("Training Random Forest Classifier")
+    print("Training Linear Discriminant Analysis Classifier")
     print("="*60)
     
-    model = RandomForestClassifier(
-        n_estimators=100,
-        max_depth=20, # Increased depth slightly for better fitting
-        min_samples_split=5,
-        min_samples_leaf=2,
-        random_state=42,
-        n_jobs=-1,
-        class_weight="balanced"
-    )
-    
-    model.fit(X_train, y_train)
+    model = train_LDA(X_train, y_train)
     
     evaluate_and_report(model, X_test, y_test)
     

@@ -15,6 +15,7 @@ MODE_NAMES = {
     1: "Level Walking",
     2: "Ramp Ascent",
     3: "Ramp Descent",
+    6: "Standing"
 }
 
 
@@ -179,11 +180,8 @@ def main():
         combined_df, emg_channels, 
         window_size_ms, step_size_ms, target_fs
     )
-    
-    # Show distribution
     print_class_distribution(y)
     
-    # Split data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
@@ -195,13 +193,7 @@ def main():
     print("="*60)
     model = train_LDA(X_train, y_train)
     
-    if model is None:
-        raise RuntimeError("Model training failed!")
-    
-    # Evaluate
     evaluate_and_report(model, X_test, y_test)
-    
-    # Save
     save_model_and_config(model, emg_channels, target_fs, window_size_ms, step_size_ms)
     
     print("\n" + "="*60)
