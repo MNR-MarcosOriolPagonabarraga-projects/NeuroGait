@@ -1,6 +1,6 @@
 # NeuroGait: Closed-Loop EMG-FES for Gait Rehabilitation
 
-> **Master's Thesis Project | Neuroengineering** > **Section:** Results & Implementation  
+> **Master's Project | Neuroengineering** > **Section:** Results & Implementation  
 > **Focus:** Real-time, low-resource gait intention detection using Surface EMG.
 
 ---
@@ -9,6 +9,8 @@
 This project develops a **closed-loop control system** for Functional Electrical Stimulation (FES) to assist patients with gait impairments (e.g., Drop Foot). 
 
 Unlike commercial systems that rely on tilt sensors or IMUs, this system uses **only Surface EMG** to detect motor intention and gait phase. It employs a **Cross-Modal Learning** strategy: high-fidelity kinematic data (Goniometers/IMUs) is used *only* during offline training to generate Ground Truth labels, while the final deployed model relies exclusively on lightweight EMG features.
+
+![image](img/pipeline.png)
 
 ## ⚙️ System Architecture
 
@@ -53,6 +55,14 @@ Simulating the embedded firmware environment:
         * **RMS** (Root Mean Square): Root meaned square Error.
     * **Input Vector:** `[TA_MAV, TA_RMS, TA_WL, MG_MAV, MG_RMS, MG_WL, RF_MAV, RF_RMS, RF_WL]` (9 floats).
 
+
+| Feature PCA (Walking mode) | Feature PCA (Gait Phase) |
+|:---:|:---:|
+| <img src="img/features_pca_mode.png" width="400"> | <img src="img/features_pca_gait.png" width="400"> 
+| <img src="img/cm_walking_mode.png" width="400"> | <img src="img/cm_gait_phase.png" width="400"> |
+| *99% Accuracy Matrix* | *86% Accuracy Matrix* |
+
+
 #### Phase 3: Classification Model
 * **Model Choice:** **Linear Discriminant Analysis (LDA)**.
 * **Why?** $O(n)$ complexity, matrix multiplication is native to C++, highly stable.
@@ -70,21 +80,32 @@ A **Finite State Machine (FSM)** filters the LDA output to prevent jitter or phy
 ## Repository Structure
 
 ```text
-NeuroGait/
-├── data/
-│   ├── raw/                # ENABL3S csv files (e.g., AB156_Circuit_001_raw.csv)
-│   └── processed/          # Cached datasets (optional)
-├── src/
-│   ├── data_loader.py      # Enabl3sDataLoader class (Lazy loading, memory optimized)
-│   ├── preprocessing.py    # Filters and Feature Extraction (Python implementation)
-│   ├── train_model.py      # Scikit-learn LDA pipeline + Export to C++
-│   └── validation.py       # Confusion Matrix & Latency Analysis
-├── embedded/               # C++ Firmware Logic
-│   ├── feature_extraction.cpp  # Embedded port of MAV/WL
-│   ├── classifier.h            # Exported LDA Weights (W vector, Bias)
-│   └── state_machine.cpp       # FSM Control Logic
-└── notebooks/
-    └── 01_Exploratory_Analysis.ipynb  # Visualization of EMG vs. Ankle Angle
+├── embedded/
+│ ├── Makefile
+│ ├── main.cpp 
+│ ├── signal_conditioner.cpp
+│ ├── feature_extraction.cpp
+│ ├── classifiers.h  
+│ └── state_machine.cpp
+├── notebooks/  
+├── src
+│ ├── lib
+│ │ ├── data_loader.py
+│ │ ├── dataset.py
+│ │ ├── features.py
+│ │ ├── preprocess.py
+│ │ ├── train.py
+│ │ ├── utils.py
+│ ├── test
+│ │ ├── load_channels.py
+│ │ ├── verify_preprocessing.py
+│ │ ├── view_data.py
+│ ├── test
+│ │ ├── write_lda_to_c.py
+│ │ ├── write_random_forest_to_c.py
+│ ├── train_gait_phase_model.py
+│ ├── train_walking_mode_model.py
+└── data/
 ```
 
 ## Workflow for Agents/Collaborators
