@@ -1,49 +1,33 @@
-#include <cmath>
-#include <cmath>
-// Optimized for SRAM usage (no std::vector)
-
-// Embedded implementation of Feature Extraction
-// Optimized for calculating features on a buffer
+#include "feature_extraction.h"
 
 namespace NeuroGait {
+    NeuroFeatures FeatureExtractor::compute(const float buffers[NUM_CHANNELS][WINDOW_SIZE]) {
+        NeuroFeatures features;
+        int f_idx = 0;
 
-// 2000ms Window @ 250Hz = 500 Samples
-const int WINDOW_SIZE = 500;
+        for (int ch = 0; ch < NUM_CHANNELS; ch++) {
+            float sum_abs = 0.0f;
+            float sum_sq = 0.0f;
+            float sum_wl = 0.0f;
 
-struct FeatureVector {
-    float mav;
-    float wl;
-};
+            for (int i = 0; i < WINDOW_SIZE; i++) {
+                float val = buffers[ch][i];
+                float abs_val = (val > 0) ? val : -val;
+                
+                sum_abs += abs_val;
+                sum_sq += val * val;
 
-class FeatureExtractor {
-public:
-    /**
-     * compute
-     * Processes a static buffer of size WINDOW_SIZE.
-     * @param buffer: The signal buffer (Rectified).
-     */
-    static FeatureVector compute(const float buffer[WINDOW_SIZE]) {
-        float sum = 0.0f;
-        float wl_sum = 0.0f;
+                if (i > 0) {
+                    float diff = val - buffers[ch][i-1];
+                    sum_wl += (diff > 0) ? diff : -diff;
+                }
+            }
 
-        // MAV Calculation
-        for (int i = 0; i < WINDOW_SIZE; i++) {
-            sum += buffer[i]; 
+            features.values[f_idx++] = sum_abs / WINDOW_SIZE;      // MAV
+            features.values[f_idx++] = std::sqrt(sum_sq / WINDOW_SIZE); // RMS
+            features.values[f_idx++] = sum_wl;                     // WL
         }
 
-        // WL Calculation
-        // sum(|x[i] - x[i-1]|)
-        for (int i = 1; i < WINDOW_SIZE; i++) {
-            float diff = buffer[i] - buffer[i - 1];
-            wl_sum += (diff > 0) ? diff : -diff; // Avoid std::abs for minimal dependency if preferred, or just use it.
-        }
-
-        FeatureVector fv;
-        fv.mav = sum / WINDOW_SIZE;
-        fv.wl = wl_sum;
-
-        return fv;
+        return features;
     }
-};
-
 }

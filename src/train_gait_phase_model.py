@@ -12,12 +12,10 @@ from .lib.train import train_LDA
 # Defines the mapping for the 3 classes
 PHASE_NAMES = {
     0: "Stance",
-    1: "Swing", 
-    2: "None"
+    1: "Swing"
 }
 
 DYNAMIC_MODES = [1, 2, 3]
-STATIC_MODES = [0, 6]
 
 def extract_features_from_window(window):
     """Extract MAV, RMS, and WL features from each EMG channel."""
@@ -55,7 +53,7 @@ def load_and_preprocess_subjects(data_root, subjects, emg_channels, load_channel
             continue
 
         # Filter for relevant modes
-        dataset_df = dataset_df[dataset_df['Mode'].isin(DYNAMIC_MODES + STATIC_MODES)]
+        dataset_df = dataset_df[dataset_df['Mode'].isin(DYNAMIC_MODES)]
         
         if dataset_df.empty:
             print(f"  Warning: No valid mode data for {subject}")
@@ -64,10 +62,6 @@ def load_and_preprocess_subjects(data_root, subjects, emg_channels, load_channel
         print(f"  Preprocessing EMG signals...")
         dataset_df[emg_channels] = preprocessor.apply_filter(dataset_df[emg_channels].values)
         dataset_df[emg_channels] = preprocessor.rectify(dataset_df[emg_channels].values)
-        
-        # Generate Target Class (0, 1, 2)
-        # Default to None (2)
-        dataset_df['Phase_Class'] = 2 
 
         # Only use Walking (Mode 1) for Stance/Swing labels
         is_walking = dataset_df['Mode'] == 1
@@ -172,7 +166,7 @@ def save_model_and_config(model, emg_channels, target_fs, window_size_ms, step_s
         'step_size_ms': step_size_ms,
         'feature_names': [f'{ch}_{feat}' for ch in emg_channels for feat in ['MAV', 'RMS', 'WL']],
         'phase_names': PHASE_NAMES,
-        'classes': [0, 1, 2] # Stance, Swing, None
+        'classes': [0, 1] # Stance, Swing
     }
     config_path = os.path.join(output_dir, "gait_phase_config.pkl")
     joblib.dump(config, config_path)
@@ -192,8 +186,8 @@ def main():
     emg_channels = ['TA', 'MG', 'RF']
     load_channels = ['TA', 'MG', 'RF', 'Mode', 'Ankle_Angle', 'Knee_Angle']
     target_fs = 250
-    window_size_ms = 2000 
-    step_size_ms = 100    
+    window_size_ms = 200 
+    step_size_ms = 50    
     
     print("="*60)
     print("Gait Phase Detection (Stance/Swing/None) - Training Pipeline")
