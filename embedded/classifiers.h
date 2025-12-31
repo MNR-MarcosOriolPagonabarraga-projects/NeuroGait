@@ -14,7 +14,7 @@ namespace NeuroGait {
     // --- Gait Phase Model (Action Layer) ---
     namespace GaitPhaseModel {
         // Returns: 0=Stance, 1=Swing, 2=None
-        int predict_lda(float* input_data);
+        int predict_gait_phase(float* input_data);
     }
 }
 

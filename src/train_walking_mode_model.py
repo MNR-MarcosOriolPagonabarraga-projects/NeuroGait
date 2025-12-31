@@ -14,8 +14,7 @@ MODE_NAMES = {
     0: "Sitting",
     1: "Level Walking",
     2: "Ramp Ascent",
-    3: "Ramp Descent",
-    6: "Standing"
+    3: "Ramp Descent"
 }
 
 
@@ -155,7 +154,7 @@ def main():
     # Configuration
     data_root = "data"
     subjects = ["AB156"]
-    emg_channels = ['TA', 'MG', 'RF']
+    emg_channels = ['TA', 'MG']
     target_fs = 250
     window_size_ms = 2000
     step_size_ms = 100
@@ -183,7 +182,7 @@ def main():
     print_class_distribution(y)
     
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+        X, y, test_size=0.3, random_state=42, stratify=y
     )
     print(f"Train: {X_train.shape[0]} samples, Test: {X_test.shape[0]} samples\n")
     

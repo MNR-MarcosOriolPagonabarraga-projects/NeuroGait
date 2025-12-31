@@ -183,8 +183,8 @@ def main():
         data_root = "../data"
 
     subjects = ["AB156"]
-    emg_channels = ['TA', 'MG', 'RF']
-    load_channels = ['TA', 'MG', 'RF', 'Mode', 'Ankle_Angle', 'Knee_Angle']
+    emg_channels = ['TA', 'MG']
+    load_channels = ['TA', 'MG', 'Mode', 'Ankle_Angle', 'Knee_Angle']
     target_fs = 250
     window_size_ms = 200 
     step_size_ms = 50    
