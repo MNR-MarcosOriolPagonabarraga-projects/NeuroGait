@@ -3,3 +3,6 @@ pandas
 numpy
 scipy
 matplotlib
+seaborn
+joblib
+tensorflow

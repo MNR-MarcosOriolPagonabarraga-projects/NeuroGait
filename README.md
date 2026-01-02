@@ -1,6 +1,6 @@
 # NeuroGait: Closed-Loop EMG-FES for Gait Rehabilitation
 
-> **Master's Project | Neuroengineering** > **Section:** Results & Implementation  
+> **Master's Project | Neuroengineering**
 > **Focus:** Real-time, low-resource gait intention detection using Surface EMG.
 
 ---
@@ -15,16 +15,15 @@ Unlike commercial systems that rely on tilt sensors or IMUs, this system uses **
 ## ⚙️ System Architecture
 
 ### 1. Hardware Constraints (Production Environment)
-* **Target Platform:** Low-power Microcontroller (e.g., ESP32, ARM Cortex-M4).
-* **Sensors:** 3 Surface EMG Channels (No IMU/Encoders in final device).
+* **Target Platform:** Low-power Microcontroller (e.g., STM32G031).
+* **Sensors:** 2 Surface EMG Channels (No IMU/Encoders in final device).
 * **Actuator:** FES Unit (Voltage-controlled biphasic stimulation).
 * **Requirement:** Real-time processing (<10ms latency) with minimal memory footprint.
 
 ### 2. Muscle Configuration (Input)
-We utilize 3 specific EMG channels to robustly differentiate gait phases:
+We utilize 2 specific EMG channels to robustly differentiate gait phases:
 1.  **TA (Tibialis Anterior):** Primary indicator for **Swing Phase** (Dorsiflexion).
 2.  **MG (Medial Gastrocnemius):** Primary indicator for **Push-off** (Plantarflexion).
-3.  **RF (Rectus Femoris):** Primary indicator for **Heel Strike/Loading** (Stabilization).
 
 ---
 
@@ -53,14 +52,14 @@ Simulating the embedded firmware environment:
         * **MAV** (Mean Absolute Value): Energy metric.
         * **WL** (Waveform Length): Complexity/Onset metric.
         * **RMS** (Root Mean Square): Root meaned square Error.
-    * **Input Vector:** `[TA_MAV, TA_RMS, TA_WL, MG_MAV, MG_RMS, MG_WL, RF_MAV, RF_RMS, RF_WL]` (9 floats).
+    * **Input Vector:** `[TA_MAV, TA_RMS, TA_WL, MG_MAV, MG_RMS, MG_WL]` (6 floats).
 
 
 | Feature PCA (Walking mode) | Feature PCA (Gait Phase) |
 |:---:|:---:|
 | <img src="img/features_pca_mode.png" width="400"> | <img src="img/features_pca_gait.png" width="400"> 
 | <img src="img/cm_walking_mode.png" width="400"> | <img src="img/cm_gait_phase.png" width="400"> |
-| *99% Accuracy Matrix* | *86% Accuracy Matrix* |
+| *97% Accuracy Matrix* | *83% Accuracy Matrix* |
 
 
 #### Phase 3: Classification Model
@@ -122,7 +121,7 @@ A **Finite State Machine (FSM)** filters the LDA output to prevent jitter or phy
 
 ## Scope & Goals
 
-- Goal: Demonstrate that a low-resource microcontroller can robustly detect gait phases using only 3 muscle channels.
+- Goal: Demonstrate that a low-resource microcontroller can robustly detect gait phases using only 2 muscle channels.
 
 - Success Criteria:
 
